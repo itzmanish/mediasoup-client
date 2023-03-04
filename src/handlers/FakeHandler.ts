@@ -1,6 +1,7 @@
 import { EnhancedEventEmitter } from '../EnhancedEventEmitter';
 import { Logger } from '../Logger';
 import { FakeMediaStreamTrack } from 'fake-mediastreamtrack';
+import * as sdpCommonUtils from './sdp/commonUtils';
 import * as utils from '../utils';
 import * as ortc from '../ortc';
 import {
@@ -26,8 +27,7 @@ import { SctpCapabilities } from '../SctpParameters';
 
 const logger = new Logger('FakeHandler');
 
-class FakeDataChannel extends EnhancedEventEmitter
-{
+class FakeDataChannel extends EnhancedEventEmitter {
 	id?: number;
 	ordered?: boolean;
 	maxPacketLifeTime?: number;
@@ -50,31 +50,27 @@ class FakeDataChannel extends EnhancedEventEmitter
 			maxRetransmits?: number;
 			label?: string;
 			protocol?: string;
-		})
-	{
+		}) {
 		super();
 
 		this.id = id;
-		this.ordered= ordered;
+		this.ordered = ordered;
 		this.maxPacketLifeTime = maxPacketLifeTime;
 		this.maxRetransmits = maxRetransmits;
 		this.label = label;
 		this.protocol = protocol;
 	}
 
-	close(): void
-	{
+	close(): void {
 		this.safeEmit('close');
 		this.emit('@close');
 	}
 
-	send(data: any): void
-	{
+	send(data: any): void {
 		this.safeEmit('message', data);
 	}
 
-	addEventListener(event: string, fn: () => void): void
-	{
+	addEventListener(event: string, fn: () => void): void {
 		this.on(event, fn);
 	}
 }
@@ -85,8 +81,7 @@ export type FakeParameters = {
 	generateLocalDtlsParameters: () => DtlsParameters;
 }
 
-export class FakeHandler extends HandlerInterface
-{
+export class FakeHandler extends HandlerInterface {
 	// Fake parameters source of RTP and SCTP parameters and capabilities.
 	private fakeParameters: any;
 	// Generic sending RTP parameters for audio and video.
@@ -105,43 +100,36 @@ export class FakeHandler extends HandlerInterface
 	/**
 	 * Creates a factory function.
 	 */
-	static createFactory(fakeParameters: FakeParameters)
-	{
+	static createFactory(fakeParameters: FakeParameters) {
 		return (): FakeHandler => new FakeHandler(fakeParameters);
 	}
 
-	constructor(fakeParameters: any)
-	{
+	constructor(fakeParameters: any) {
 		super();
 
 		this.fakeParameters = fakeParameters;
 	}
 
-	get name(): string
-	{
+	get name(): string {
 		return 'FakeHandler';
 	}
 
-	close(): void
-	{
+	close(): void {
 		logger.debug('close()');
 	}
 
 	// NOTE: Custom method for simulation purposes.
-	setConnectionState(connectionState: ConnectionState): void
-	{
+	setConnectionState(connectionState: ConnectionState): void {
 		this.emit('@connectionstatechange', connectionState);
 	}
 
-	async getNativeRtpCapabilities(): Promise<RtpCapabilities>
-	{
+	async getNativeRtpCapabilities(): Promise<RtpCapabilities> {
 		logger.debug('getNativeRtpCapabilities()');
 
 		return this.fakeParameters.generateNativeRtpCapabilities();
 	}
 
-	async getNativeSctpCapabilities(): Promise<SctpCapabilities>
-	{
+	async getNativeSctpCapabilities(): Promise<SctpCapabilities> {
 		logger.debug('getNativeSctpCapabilities()');
 
 		return this.fakeParameters.generateNativeSctpCapabilities();
@@ -161,49 +149,44 @@ export class FakeHandler extends HandlerInterface
 			extendedRtpCapabilities
 			/* eslint-enable @typescript-eslint/no-unused-vars */
 		}: HandlerRunOptions
-	): void
-	{
+	): void {
 		logger.debug('run()');
 
 		// Generic sending RTP parameters for audio and video.
 		// @type {Object}
 		this._rtpParametersByKind =
 		{
-			audio : ortc.getSendingRtpParameters('audio', extendedRtpCapabilities),
-			video : ortc.getSendingRtpParameters('video', extendedRtpCapabilities)
+			audio: ortc.getSendingRtpParameters('audio', extendedRtpCapabilities),
+			video: ortc.getSendingRtpParameters('video', extendedRtpCapabilities)
 		};
 	}
 
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	async updateIceServers(iceServers: RTCIceServer[]): Promise<void>
-	{
+	async updateIceServers(iceServers: RTCIceServer[]): Promise<void> {
 		logger.debug('updateIceServers()');
 
 		return;
 	}
 
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	async restartIce(iceParameters: IceParameters): Promise<void>
-	{
+	async restartIce(iceParameters: IceParameters): Promise<void> {
 		logger.debug('restartIce()');
 
 		return;
 	}
 
-	async getTransportStats(): Promise<RTCStatsReport>
-	{
+	async getTransportStats(): Promise<RTCStatsReport> {
 		return new Map(); // NOTE: Whatever.
 	}
 
 	async send(
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		{ track, encodings, codecOptions, codec }: HandlerSendOptions
-	): Promise<HandlerSendResult>
-	{
+	): Promise<HandlerSendResult> {
 		logger.debug('send() [kind:%s, track.id:%s]', track.kind, track.id);
 
 		if (!this._transportReady)
-			await this._setupTransport({ localDtlsRole: 'server' });
+			await this._setupTransport({ localDtlsRole: DtlsRole.server });
 
 		const rtpParameters =
 			utils.clone(this._rtpParametersByKind![track.kind], {});
@@ -213,10 +196,9 @@ export class FakeHandler extends HandlerInterface
 		rtpParameters.mid = `mid-${utils.generateRandomNumber()}`;
 
 		if (!encodings)
-			encodings = [ {} ];
+			encodings = [{}];
 
-		for (const encoding of encodings)
-		{
+		for (const encoding of encodings) {
 			encoding.ssrc = utils.generateRandomNumber();
 
 			if (useRtx)
@@ -228,9 +210,9 @@ export class FakeHandler extends HandlerInterface
 		// Fill RTCRtpParameters.rtcp.
 		rtpParameters.rtcp =
 		{
-			cname       : this._cname,
-			reducedSize : true,
-			mux         : true
+			cname: this._cname,
+			reducedSize: true,
+			mux: true
 		};
 
 		const localId = this._nextLocalId++;
@@ -240,8 +222,7 @@ export class FakeHandler extends HandlerInterface
 		return { localId: String(localId), rtpParameters };
 	}
 
-	async stopSending(localId: string): Promise<void>
-	{
+	async stopSending(localId: string): Promise<void> {
 		logger.debug('stopSending() [localId:%s]', localId);
 
 		if (!this._tracks.has(Number(localId)))
@@ -251,28 +232,23 @@ export class FakeHandler extends HandlerInterface
 	}
 
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	async pauseSending(localId: string): Promise<void>
-	{
+	async pauseSending(localId: string): Promise<void> {
 		// Unimplemented.
 	}
 
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	async resumeSending(localId: string): Promise<void>
-	{
+	async resumeSending(localId: string): Promise<void> {
 		// Unimplemented.
 	}
 
 	async replaceTrack(
 		localId: string, track: MediaStreamTrack | null
-	): Promise<void>
-	{
-		if (track)
-		{
+	): Promise<void> {
+		if (track) {
 			logger.debug(
 				'replaceTrack() [localId:%s, track.id:%s]', localId, track.id);
 		}
-		else
-		{
+		else {
 			logger.debug('replaceTrack() [localId:%s, no track]', localId);
 		}
 
@@ -280,23 +256,20 @@ export class FakeHandler extends HandlerInterface
 		this._tracks.set(Number(localId), track);
 	}
 
-	async setMaxSpatialLayer(localId: string, spatialLayer: number): Promise<void>
-	{
+	async setMaxSpatialLayer(localId: string, spatialLayer: number): Promise<void> {
 		logger.debug(
 			'setMaxSpatialLayer() [localId:%s, spatialLayer:%s]',
 			localId, spatialLayer);
 	}
 
-	async setRtpEncodingParameters(localId: string, params: any): Promise<void>
-	{
+	async setRtpEncodingParameters(localId: string, params: any): Promise<void> {
 		logger.debug(
 			'setRtpEncodingParameters() [localId:%s, params:%o]',
 			localId, params);
 	}
 
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	async getSenderStats(localId: string): Promise<RTCStatsReport>
-	{
+	async getSenderStats(localId: string): Promise<RTCStatsReport> {
 		return new Map(); // NOTE: Whatever.
 	}
 
@@ -308,16 +281,15 @@ export class FakeHandler extends HandlerInterface
 			label,
 			protocol
 		}: HandlerSendDataChannelOptions
-	): Promise<HandlerSendDataChannelResult>
-	{
+	): Promise<HandlerSendDataChannelResult> {
 		if (!this._transportReady)
-			await this._setupTransport({ localDtlsRole: 'server' });
+			await this._setupTransport({ localDtlsRole: DtlsRole.server });
 
 		logger.debug('sendDataChannel()');
 
 		const dataChannel = new FakeDataChannel(
 			{
-				id : this._nextSctpStreamId++,
+				id: this._nextSctpStreamId++,
 				ordered,
 				maxPacketLifeTime,
 				maxRetransmits,
@@ -327,10 +299,10 @@ export class FakeHandler extends HandlerInterface
 
 		const sctpStreamParameters =
 		{
-			streamId          : this._nextSctpStreamId,
-			ordered           : ordered,
-			maxPacketLifeTime : maxPacketLifeTime,
-			maxRetransmits    : maxRetransmits
+			streamId: this._nextSctpStreamId,
+			ordered: ordered,
+			maxPacketLifeTime: maxPacketLifeTime,
+			maxRetransmits: maxRetransmits
 		};
 
 		// @ts-ignore.
@@ -339,16 +311,14 @@ export class FakeHandler extends HandlerInterface
 
 	async receive(
 		optionsList: HandlerReceiveOptions[]
-	) : Promise<HandlerReceiveResult[]>
-	{
+	): Promise<HandlerReceiveResult[]> {
 		const results: HandlerReceiveResult[] = [];
 
-		for (const options of optionsList)
-		{
+		for (const options of optionsList) {
 			const { trackId, kind } = options;
 
 			if (!this._transportReady)
-				await this._setupTransport({ localDtlsRole: 'client' });
+				await this._setupTransport({ localDtlsRole: DtlsRole.client });
 
 			logger.debug('receive() [trackId:%s, kind:%s]', trackId, kind);
 
@@ -363,10 +333,8 @@ export class FakeHandler extends HandlerInterface
 		return results;
 	}
 
-	async stopReceiving(localIds: string[]): Promise<void>
-	{
-		for (const localId of localIds)
-		{
+	async stopReceiving(localIds: string[]): Promise<void> {
+		for (const localId of localIds) {
 			logger.debug('stopReceiving() [localId:%s]', localId);
 
 			this._tracks.delete(Number(localId));
@@ -375,39 +343,35 @@ export class FakeHandler extends HandlerInterface
 
 	async pauseReceiving(
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		localIds: string[]): Promise<void>
-	{
+		localIds: string[]): Promise<void> {
 		// Unimplemented.
 	}
 
 	async resumeReceiving(
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		localIds: string[]): Promise<void>
-	{
+		localIds: string[]): Promise<void> {
 		// Unimplemented.
 	}
 
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	async getReceiverStats(localId: string): Promise<RTCStatsReport>
-	{
+	async getReceiverStats(localId: string): Promise<RTCStatsReport> {
 		return new Map(); //
 	}
 
 	async receiveDataChannel(
 		{ sctpStreamParameters, label, protocol }: HandlerReceiveDataChannelOptions
-	): Promise<HandlerReceiveDataChannelResult>
-	{
+	): Promise<HandlerReceiveDataChannelResult> {
 		if (!this._transportReady)
-			await this._setupTransport({ localDtlsRole: 'client' });
+			await this._setupTransport({ localDtlsRole: DtlsRole.client });
 
 		logger.debug('receiveDataChannel()');
 
 		const dataChannel = new FakeDataChannel(
 			{
-				id                : sctpStreamParameters.streamId!,
-				ordered           : sctpStreamParameters.ordered,
-				maxPacketLifeTime : sctpStreamParameters.maxPacketLifeTime,
-				maxRetransmits    : sctpStreamParameters.maxRetransmits,
+				id: sctpStreamParameters.streamId!,
+				ordered: sctpStreamParameters.ordered,
+				maxPacketLifeTime: sctpStreamParameters.maxPacketLifeTime,
+				maxRetransmits: sctpStreamParameters.maxRetransmits,
 				label,
 				protocol
 			});
@@ -422,14 +386,15 @@ export class FakeHandler extends HandlerInterface
 			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			localSdpObject
 		}:
-		{
-			localDtlsRole: DtlsRole;
-			localSdpObject?: any;
-		}
-	): Promise<void>
-	{
+			{
+				localDtlsRole: DtlsRole;
+				localSdpObject?: any;
+			}
+	): Promise<void> {
 		const dtlsParameters =
 			utils.clone(this.fakeParameters.generateLocalDtlsParameters(), {});
+
+		const iceParameters = sdpCommonUtils.extractIceParameters({ sdpObject: localSdpObject })
 
 		// Set our DTLS role.
 		if (localDtlsRole)
@@ -440,7 +405,7 @@ export class FakeHandler extends HandlerInterface
 
 		// Need to tell the remote transport about our parameters.
 		await new Promise<void>((resolve, reject) => (
-			this.emit('@connect', { dtlsParameters }, resolve, reject)
+			this.emit('@connect', { dtlsParameters, iceParameters }, resolve, reject)
 		));
 
 		this._transportReady = true;

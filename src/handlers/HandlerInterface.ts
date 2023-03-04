@@ -21,84 +21,86 @@ import {
 export type HandlerFactory = () => HandlerInterface;
 
 export type HandlerRunOptions =
-{
-	direction: 'send' | 'recv';
-	iceParameters: IceParameters;
-	iceCandidates: IceCandidate[];
-	dtlsParameters: DtlsParameters;
-	sctpParameters?: SctpParameters;
-	iceServers?: RTCIceServer[];
-	iceTransportPolicy?: RTCIceTransportPolicy;
-	additionalSettings?: any;
-	proprietaryConstraints?: any;
-	extendedRtpCapabilities: any;
-};
+	{
+		direction: 'send' | 'recv';
+		iceParameters: IceParameters;
+		iceCandidates: IceCandidate[];
+		dtlsParameters: DtlsParameters;
+		sctpParameters?: SctpParameters;
+		iceServers?: RTCIceServer[];
+		iceTransportPolicy?: RTCIceTransportPolicy;
+		additionalSettings?: any;
+		proprietaryConstraints?: any;
+		extendedRtpCapabilities: any;
+	};
 
 export type HandlerSendOptions =
-{
-	track: MediaStreamTrack;
-	encodings?: RtpEncodingParameters[];
-	codecOptions?: ProducerCodecOptions;
-	codec?: RtpCodecCapability;
-};
+	{
+		track: MediaStreamTrack;
+		encodings?: RtpEncodingParameters[];
+		codecOptions?: ProducerCodecOptions;
+		codec?: RtpCodecCapability;
+	};
 
 export type HandlerSendResult =
-{
-	localId: string;
-	rtpParameters: RtpParameters;
-	rtpSender?: RTCRtpSender;
-};
+	{
+		localId: string;
+		rtpParameters: RtpParameters;
+		rtpSender?: RTCRtpSender;
+	};
 
 export type HandlerReceiveOptions =
-{
-	trackId: string;
-	kind: 'audio' | 'video';
-	rtpParameters: RtpParameters;
-};
+	{
+		trackId: string;
+		kind: 'audio' | 'video';
+		rtpParameters: RtpParameters;
+	};
 
 export type HandlerReceiveResult =
-{
-	localId: string;
-	track: MediaStreamTrack;
-	rtpReceiver?: RTCRtpReceiver;
-};
+	{
+		localId: string;
+		track: MediaStreamTrack;
+		rtpReceiver?: RTCRtpReceiver;
+	};
 
 export type HandlerSendDataChannelOptions = SctpStreamParameters;
 
 export type HandlerSendDataChannelResult =
-{
-	dataChannel: RTCDataChannel;
-	sctpStreamParameters: SctpStreamParameters;
-};
+	{
+		dataChannel: RTCDataChannel;
+		sctpStreamParameters: SctpStreamParameters;
+	};
 
 export type HandlerReceiveDataChannelOptions =
-{
-	sctpStreamParameters: SctpStreamParameters;
-	label?: string;
-	protocol?: string;
-}
+	{
+		sctpStreamParameters: SctpStreamParameters;
+		label?: string;
+		protocol?: string;
+	}
 
 export type HandlerReceiveDataChannelResult =
-{
-	dataChannel: RTCDataChannel;
-}
+	{
+		dataChannel: RTCDataChannel;
+	}
 
 export type HandlerEvents =
-{
-	'@close': [];
-	'@connect':
-	[
-		{ dtlsParameters: DtlsParameters },
-		() => void,
-		(error: Error) => void
-	];
-	'@connectionstatechange': [ConnectionState];
-}
+	{
+		'@close': [];
+		'@connect':
+		[
+			{
+				dtlsParameters: DtlsParameters,
+				iceParameters: IceParameters
+			},
+			() => void,
+			(error: Error) => void
+		];
+		'@connectionstatechange': [ConnectionState];
+	}
 
 export abstract class HandlerInterface extends EnhancedEventEmitter<HandlerEvents>
 {
-	constructor()
-	{
+	constructor() {
 		super();
 	}
 
@@ -146,7 +148,7 @@ export abstract class HandlerInterface extends EnhancedEventEmitter<HandlerEvent
 
 	abstract receive(
 		optionsList: HandlerReceiveOptions[]
-	) : Promise<HandlerReceiveResult[]>
+	): Promise<HandlerReceiveResult[]>
 
 	abstract stopReceiving(localIds: string[]): Promise<void>;
 
