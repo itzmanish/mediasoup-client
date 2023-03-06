@@ -1,5 +1,5 @@
 import * as sdpTransform from 'sdp-transform';
-import { DtlsParameters, DtlsRole } from '../../Transport';
+import { DtlsParameters, DtlsRole, IceParameters } from '../../Transport';
 import {
 	RtpCapabilities,
 	RtpCodecCapability,
@@ -10,9 +10,8 @@ import {
 
 export function extractRtpCapabilities(
 	{ sdpObject }:
-	{ sdpObject: any }
-): RtpCapabilities
-{
+		{ sdpObject: any }
+): RtpCapabilities {
 	// Map of RtpCodecParameters indexed by payload type.
 	const codecsMap: Map<number, RtpCodecCapability> = new Map();
 	// Array of RtpHeaderExtensions.
@@ -21,56 +20,52 @@ export function extractRtpCapabilities(
 	let gotAudio = false;
 	let gotVideo = false;
 
-	for (const m of sdpObject.media)
-	{
+	for (const m of sdpObject.media) {
 		const kind = m.type;
 
-		switch (kind)
-		{
+		switch (kind) {
 			case 'audio':
-			{
-				if (gotAudio)
-					continue;
+				{
+					if (gotAudio)
+						continue;
 
-				gotAudio = true;
+					gotAudio = true;
 
-				break;
-			}
+					break;
+				}
 			case 'video':
-			{
-				if (gotVideo)
-					continue;
+				{
+					if (gotVideo)
+						continue;
 
-				gotVideo = true;
+					gotVideo = true;
 
-				break;
-			}
+					break;
+				}
 			default:
-			{
-				continue;
-			}
+				{
+					continue;
+				}
 		}
 
 		// Get codecs.
-		for (const rtp of m.rtp)
-		{
+		for (const rtp of m.rtp) {
 			const codec: RtpCodecCapability =
 			{
-				kind                 : kind,
-				mimeType             : `${kind}/${rtp.codec}`,
-				preferredPayloadType : rtp.payload,
-				clockRate            : rtp.rate,
-				channels             : rtp.encoding,
-				parameters           : {},
-				rtcpFeedback         : []
+				kind: kind,
+				mimeType: `${kind}/${rtp.codec}`,
+				preferredPayloadType: rtp.payload,
+				clockRate: rtp.rate,
+				channels: rtp.encoding,
+				parameters: {},
+				rtcpFeedback: []
 			};
 
 			codecsMap.set(codec.preferredPayloadType!, codec);
 		}
 
 		// Get codec parameters.
-		for (const fmtp of m.fmtp || [])
-		{
+		for (const fmtp of m.fmtp || []) {
 			const parameters = sdpTransform.parseParams(fmtp.config);
 			const codec = codecsMap.get(fmtp.payload);
 
@@ -85,8 +80,7 @@ export function extractRtpCapabilities(
 		}
 
 		// Get RTCP feedback for each codec.
-		for (const fb of m.rtcpFb || [])
-		{
+		for (const fb of m.rtcpFb || []) {
 			const codec = codecsMap.get(fb.payload);
 
 			if (!codec)
@@ -94,8 +88,8 @@ export function extractRtpCapabilities(
 
 			const feedback: RtcpFeedback =
 			{
-				type      : fb.type,
-				parameter : fb.subtype
+				type: fb.type,
+				parameter: fb.subtype
 			};
 
 			if (!feedback.parameter)
@@ -105,17 +99,16 @@ export function extractRtpCapabilities(
 		}
 
 		// Get RTP header extensions.
-		for (const ext of m.ext || [])
-		{
+		for (const ext of m.ext || []) {
 			// Ignore encrypted extensions (not yet supported in mediasoup).
 			if (ext['encrypt-uri'])
 				continue;
 
 			const headerExtension: RtpHeaderExtension =
 			{
-				kind        : kind,
-				uri         : ext.uri,
-				preferredId : ext.value
+				kind: kind,
+				uri: ext.uri,
+				preferredId: ext.value
 			};
 
 			headerExtensions.push(headerExtension);
@@ -124,8 +117,8 @@ export function extractRtpCapabilities(
 
 	const rtpCapabilities: RtpCapabilities =
 	{
-		codecs           : Array.from(codecsMap.values()),
-		headerExtensions : headerExtensions
+		codecs: Array.from(codecsMap.values()),
+		headerExtensions: headerExtensions
 	};
 
 	return rtpCapabilities;
@@ -133,9 +126,8 @@ export function extractRtpCapabilities(
 
 export function extractDtlsParameters(
 	{ sdpObject }:
-	{ sdpObject: any }
-): DtlsParameters
-{
+		{ sdpObject: any }
+): DtlsParameters {
 	const mediaObject = (sdpObject.media || [])
 		.find((m: { iceUfrag: string; port: number }) => (
 			m.iceUfrag && m.port !== 0
@@ -147,39 +139,54 @@ export function extractDtlsParameters(
 	const fingerprint = mediaObject.fingerprint || sdpObject.fingerprint;
 	let role: DtlsRole | undefined;
 
-	switch (mediaObject.setup)
-	{
+	switch (mediaObject.setup) {
 		case 'active':
-			role = 'client';
+			role = DtlsRole.client;
 			break;
 		case 'passive':
-			role = 'server';
+			role = DtlsRole.server;
 			break;
 		case 'actpass':
-			role = 'auto';
+			role = DtlsRole.auto;
 			break;
 	}
 
 	const dtlsParameters: DtlsParameters =
 	{
 		role,
-		fingerprints :
-		[
-			{
-				algorithm : fingerprint.type,
-				value     : fingerprint.hash
-			}
-		]
+		fingerprints:
+			[
+				{
+					algorithm: fingerprint.type,
+					value: fingerprint.hash
+				}
+			]
 	};
 
 	return dtlsParameters;
 }
 
+export function extractIceParameters({ sdpObject }:
+	{ sdpObject: any }
+): IceParameters {
+	const mediaObject = (sdpObject.media || [])
+		.find((m: { iceUfrag: string; port: number }) => (
+			m.iceUfrag && m.port !== 0
+		));
+
+	if (!mediaObject)
+		throw new Error('no active media section found');
+	return {
+		password: mediaObject.icePwd ?? "",
+		usernameFragment: mediaObject.iceUfrag ?? "",
+		iceLite: false
+	}
+}
+
 export function getCname(
 	{ offerMediaObject }:
-	{ offerMediaObject: any }
-): string
-{
+		{ offerMediaObject: any }
+): string {
 	const ssrcCnameLine = (offerMediaObject.ssrcs || [])
 		.find((line: { attribute: string }) => line.attribute === 'cname');
 
@@ -198,14 +205,12 @@ export function applyCodecParameters(
 		offerRtpParameters,
 		answerMediaObject
 	}:
-	{
-		offerRtpParameters: RtpParameters;
-		answerMediaObject: any;
-	}
-): void
-{
-	for (const codec of offerRtpParameters.codecs)
-	{
+		{
+			offerRtpParameters: RtpParameters;
+			answerMediaObject: any;
+		}
+): void {
+	for (const codec of offerRtpParameters.codecs) {
 		const mimeType = codec.mimeType.toLowerCase();
 
 		// Avoid parsing codec parameters for unhandled codecs.
@@ -224,32 +229,29 @@ export function applyCodecParameters(
 		let fmtp = answerMediaObject.fmtp
 			.find((f: { payload: number }) => f.payload === codec.payloadType);
 
-		if (!fmtp)
-		{
+		if (!fmtp) {
 			fmtp = { payload: codec.payloadType, config: '' };
 			answerMediaObject.fmtp.push(fmtp);
 		}
 
 		const parameters = sdpTransform.parseParams(fmtp.config);
 
-		switch (mimeType)
-		{
+		switch (mimeType) {
 			case 'audio/opus':
-			{
-				const spropStereo = codec.parameters['sprop-stereo'];
+				{
+					const spropStereo = codec.parameters['sprop-stereo'];
 
-				if (spropStereo !== undefined)
-					parameters.stereo = spropStereo ? 1 : 0;
+					if (spropStereo !== undefined)
+						parameters.stereo = spropStereo ? 1 : 0;
 
-				break;
-			}
+					break;
+				}
 		}
 
 		// Write the codec fmtp.config back.
 		fmtp.config = '';
 
-		for (const key of Object.keys(parameters))
-		{
+		for (const key of Object.keys(parameters)) {
 			if (fmtp.config)
 				fmtp.config += ';';
 

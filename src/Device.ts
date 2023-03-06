@@ -9,14 +9,6 @@ import * as ortc from './ortc';
 import { Transport, TransportOptions, CanProduceByKind } from './Transport';
 import { HandlerFactory, HandlerInterface } from './handlers/HandlerInterface';
 import { Chrome74 } from './handlers/Chrome74';
-import { Chrome70 } from './handlers/Chrome70';
-import { Chrome67 } from './handlers/Chrome67';
-import { Chrome55 } from './handlers/Chrome55';
-import { Firefox60 } from './handlers/Firefox60';
-import { Safari12 } from './handlers/Safari12';
-import { Safari11 } from './handlers/Safari11';
-import { Edge11 } from './handlers/Edge11';
-import { ReactNative } from './handlers/ReactNative';
 import { RtpCapabilities, MediaKind } from './RtpParameters';
 import { SctpCapabilities } from './SctpParameters';
 
@@ -34,35 +26,31 @@ export type BuiltinHandlerName =
 	| 'ReactNative';
 
 export type DeviceOptions =
-{
-	/**
-	 * The name of one of the builtin handlers.
-	 */
-	handlerName?: BuiltinHandlerName;
-	/**
-	 * Custom handler factory.
-	 */
-	handlerFactory?: HandlerFactory;
-	/**
-	 * DEPRECATED!
-	 * The name of one of the builtin handlers.
-	 */
-	Handler?: string;
-};
+	{
+		/**
+		 * The name of one of the builtin handlers.
+		 */
+		handlerName?: BuiltinHandlerName;
+		/**
+		 * Custom handler factory.
+		 */
+		handlerFactory?: HandlerFactory;
+		/**
+		 * DEPRECATED!
+		 * The name of one of the builtin handlers.
+		 */
+		Handler?: string;
+	};
 
-interface InternalTransportOptions extends TransportOptions
-{
+interface InternalTransportOptions extends TransportOptions {
 	direction: 'send' | 'recv';
 }
 
-export function detectDevice(): BuiltinHandlerName | undefined
-{
+export function detectDevice(): BuiltinHandlerName | undefined {
 	// React-Native.
 	// NOTE: react-native-webrtc >= 1.75.0 is required.
-	if (typeof navigator === 'object' && navigator.product === 'ReactNative')
-	{
-		if (typeof RTCPeerConnection === 'undefined')
-		{
+	if (typeof navigator === 'object' && navigator.product === 'ReactNative') {
+		if (typeof RTCPeerConnection === 'undefined') {
 			logger.warn(
 				'this._detectDevice() | unsupported ReactNative without RTCPeerConnection');
 
@@ -74,37 +62,30 @@ export function detectDevice(): BuiltinHandlerName | undefined
 		return 'ReactNative';
 	}
 	// Browser.
-	else if (typeof navigator === 'object' && typeof navigator.userAgent === 'string')
-	{
+	else if (typeof navigator === 'object' && typeof navigator.userAgent === 'string') {
 		const ua = navigator.userAgent;
 		const browser = Bowser.getParser(ua);
 		const engine = browser.getEngine();
 
 		// Chrome, Chromium, and Edge.
-		if (browser.satisfies({ chrome: '>=74', chromium: '>=74', 'microsoft edge': '>=88' }))
-		{
+		if (browser.satisfies({ chrome: '>=74', chromium: '>=74', 'microsoft edge': '>=88' })) {
 			return 'Chrome74';
 		}
-		else if (browser.satisfies({ chrome: '>=70', chromium: '>=70' }))
-		{
+		else if (browser.satisfies({ chrome: '>=70', chromium: '>=70' })) {
 			return 'Chrome70';
 		}
-		else if (browser.satisfies({ chrome: '>=67', chromium: '>=67' }))
-		{
+		else if (browser.satisfies({ chrome: '>=67', chromium: '>=67' })) {
 			return 'Chrome67';
 		}
-		else if (browser.satisfies({ chrome: '>=55', chromium: '>=55' }))
-		{
+		else if (browser.satisfies({ chrome: '>=55', chromium: '>=55' })) {
 			return 'Chrome55';
 		}
 		// Firefox.
-		else if (browser.satisfies({ firefox: '>=60' }))
-		{
+		else if (browser.satisfies({ firefox: '>=60' })) {
 			return 'Firefox60';
 		}
 		// Firefox on iOS.
-		else if (browser.satisfies({ ios: { OS: '>=14.3', firefox: '>=30.0' } }))
-		{
+		else if (browser.satisfies({ ios: { OS: '>=14.3', firefox: '>=30.0' } })) {
 			return 'Safari12';
 		}
 		// Safari with Unified-Plan support enabled.
@@ -112,57 +93,46 @@ export function detectDevice(): BuiltinHandlerName | undefined
 			browser.satisfies({ safari: '>=12.0' }) &&
 			typeof RTCRtpTransceiver !== 'undefined' &&
 			RTCRtpTransceiver.prototype.hasOwnProperty('currentDirection')
-		)
-		{
+		) {
 			return 'Safari12';
 		}
 		// Safari with Plab-B support.
-		else if (browser.satisfies({ safari: '>=11' }))
-		{
+		else if (browser.satisfies({ safari: '>=11' })) {
 			return 'Safari11';
 		}
 		// Old Edge with ORTC support.
 		else if (
 			browser.satisfies({ 'microsoft edge': '>=11' }) &&
 			browser.satisfies({ 'microsoft edge': '<=18' })
-		)
-		{
+		) {
 			return 'Edge11';
 		}
 		// Best effort for Chromium based browsers.
-		else if (engine.name && engine.name.toLowerCase() === 'blink')
-		{
+		else if (engine.name && engine.name.toLowerCase() === 'blink') {
 			const match = ua.match(/(?:(?:Chrome|Chromium))[ /](\w+)/i);
 
-			if (match)
-			{
+			if (match) {
 				const version = Number(match[1]);
 
-				if (version >= 74)
-				{
+				if (version >= 74) {
 					return 'Chrome74';
 				}
-				else if (version >= 70)
-				{
+				else if (version >= 70) {
 					return 'Chrome70';
 				}
-				else if (version >= 67)
-				{
+				else if (version >= 67) {
 					return 'Chrome67';
 				}
-				else
-				{
+				else {
 					return 'Chrome55';
 				}
 			}
-			else
-			{
+			else {
 				return 'Chrome74';
 			}
 		}
 		// Unsupported browser.
-		else
-		{
+		else {
 			logger.warn(
 				'this._detectDevice() | browser not supported [name:%s, version:%s]',
 				browser.getBrowserName(), browser.getBrowserVersion());
@@ -171,8 +141,7 @@ export function detectDevice(): BuiltinHandlerName | undefined
 		}
 	}
 	// Unknown device.
-	else
-	{
+	else {
 		logger.warn('this._detectDevice() | unknown device');
 
 		return undefined;
@@ -180,12 +149,11 @@ export function detectDevice(): BuiltinHandlerName | undefined
 }
 
 export type DeviceObserverEvents =
-{
-	newtransport: [Transport];
-}
+	{
+		newtransport: [Transport];
+	}
 
-export class Device
-{
+export class Device {
 	// RTC handler factory.
 	private readonly _handlerFactory: HandlerFactory;
 	// Handler name.
@@ -209,13 +177,11 @@ export class Device
 	 *
 	 * @throws {UnsupportedError} if device is not supported.
 	 */
-	constructor({ handlerName, handlerFactory, Handler }: DeviceOptions = {})
-	{
+	constructor({ handlerName, handlerFactory, Handler }: DeviceOptions = {}) {
 		logger.debug('constructor()');
 
 		// Handle deprecated option.
-		if (Handler)
-		{
+		if (Handler) {
 			logger.warn(
 				'constructor() | Handler option is DEPRECATED, use handlerName or handlerFactory instead');
 
@@ -226,24 +192,19 @@ export class Device
 					'non string Handler option no longer supported, use handlerFactory instead');
 		}
 
-		if (handlerName && handlerFactory)
-		{
+		if (handlerName && handlerFactory) {
 			throw new TypeError(
 				'just one of handlerName or handlerInterface can be given');
 		}
 
-		if (handlerFactory)
-		{
+		if (handlerFactory) {
 			this._handlerFactory = handlerFactory;
 		}
-		else
-		{
-			if (handlerName)
-			{
+		else {
+			if (handlerName) {
 				logger.debug('constructor() | handler given: %s', handlerName);
 			}
-			else
-			{
+			else {
 				handlerName = detectDevice();
 
 				if (handlerName)
@@ -252,35 +213,11 @@ export class Device
 					throw new UnsupportedError('device not supported');
 			}
 
-			switch (handlerName)
-			{
+			switch (handlerName) {
 				case 'Chrome74':
 					this._handlerFactory = Chrome74.createFactory();
 					break;
-				case 'Chrome70':
-					this._handlerFactory = Chrome70.createFactory();
-					break;
-				case 'Chrome67':
-					this._handlerFactory = Chrome67.createFactory();
-					break;
-				case 'Chrome55':
-					this._handlerFactory = Chrome55.createFactory();
-					break;
-				case 'Firefox60':
-					this._handlerFactory = Firefox60.createFactory();
-					break;
-				case 'Safari12':
-					this._handlerFactory = Safari12.createFactory();
-					break;
-				case 'Safari11':
-					this._handlerFactory = Safari11.createFactory();
-					break;
-				case 'Edge11':
-					this._handlerFactory = Edge11.createFactory();
-					break;
-				case 'ReactNative':
-					this._handlerFactory = ReactNative.createFactory();
-					break;
+
 				default:
 					throw new TypeError(`unknown handlerName "${handlerName}"`);
 			}
@@ -297,8 +234,8 @@ export class Device
 		this._recvRtpCapabilities = undefined;
 		this._canProduceByKind =
 		{
-			audio : false,
-			video : false
+			audio: false,
+			video: false
 		};
 		this._sctpCapabilities = undefined;
 	}
@@ -306,16 +243,14 @@ export class Device
 	/**
 	 * The RTC handler name.
 	 */
-	get handlerName(): string
-	{
+	get handlerName(): string {
 		return this._handlerName;
 	}
 
 	/**
 	 * Whether the Device is loaded.
 	 */
-	get loaded(): boolean
-	{
+	get loaded(): boolean {
 		return this._loaded;
 	}
 
@@ -324,8 +259,7 @@ export class Device
 	 *
 	 * @throws {InvalidStateError} if not loaded.
 	 */
-	get rtpCapabilities(): RtpCapabilities
-	{
+	get rtpCapabilities(): RtpCapabilities {
 		if (!this._loaded)
 			throw new InvalidStateError('not loaded');
 
@@ -337,16 +271,14 @@ export class Device
 	 *
 	 * @throws {InvalidStateError} if not loaded.
 	 */
-	get sctpCapabilities(): SctpCapabilities
-	{
+	get sctpCapabilities(): SctpCapabilities {
 		if (!this._loaded)
 			throw new InvalidStateError('not loaded');
 
 		return this._sctpCapabilities!;
 	}
 
-	get observer(): EnhancedEventEmitter
-	{
+	get observer(): EnhancedEventEmitter {
 		return this._observer;
 	}
 
@@ -355,9 +287,8 @@ export class Device
 	 */
 	async load(
 		{ routerRtpCapabilities }:
-		{ routerRtpCapabilities: RtpCapabilities }
-	): Promise<void>
-	{
+			{ routerRtpCapabilities: RtpCapabilities }
+	): Promise<void> {
 		logger.debug('load() [routerRtpCapabilities:%o]', routerRtpCapabilities);
 
 		routerRtpCapabilities = utils.clone(routerRtpCapabilities, undefined);
@@ -365,8 +296,7 @@ export class Device
 		// Temporal handler to get its capabilities.
 		let handler: HandlerInterface | undefined;
 
-		try
-		{
+		try {
 			if (this._loaded)
 				throw new InvalidStateError('already loaded');
 
@@ -423,8 +353,7 @@ export class Device
 
 			handler.close();
 		}
-		catch (error)
-		{
+		catch (error) {
 			if (handler)
 				handler.close();
 
@@ -438,8 +367,7 @@ export class Device
 	 * @throws {InvalidStateError} if not loaded.
 	 * @throws {TypeError} if wrong arguments.
 	 */
-	canProduce(kind: MediaKind): boolean
-	{
+	canProduce(kind: MediaKind): boolean {
 		if (!this._loaded)
 			throw new InvalidStateError('not loaded');
 		else if (kind !== 'audio' && kind !== 'video')
@@ -467,23 +395,22 @@ export class Device
 			proprietaryConstraints,
 			appData
 		}: TransportOptions
-	): Transport
-	{
+	): Transport {
 		logger.debug('createSendTransport()');
 
 		return this._createTransport(
 			{
-				direction              : 'send',
-				id                     : id,
-				iceParameters          : iceParameters,
-				iceCandidates          : iceCandidates,
-				dtlsParameters         : dtlsParameters,
-				sctpParameters         : sctpParameters,
-				iceServers             : iceServers,
-				iceTransportPolicy     : iceTransportPolicy,
-				additionalSettings     : additionalSettings,
-				proprietaryConstraints : proprietaryConstraints,
-				appData                : appData
+				direction: 'send',
+				id: id,
+				iceParameters: iceParameters,
+				iceCandidates: iceCandidates,
+				dtlsParameters: dtlsParameters,
+				sctpParameters: sctpParameters,
+				iceServers: iceServers,
+				iceTransportPolicy: iceTransportPolicy,
+				additionalSettings: additionalSettings,
+				proprietaryConstraints: proprietaryConstraints,
+				appData: appData
 			});
 	}
 
@@ -506,23 +433,22 @@ export class Device
 			proprietaryConstraints,
 			appData
 		}: TransportOptions
-	): Transport
-	{
+	): Transport {
 		logger.debug('createRecvTransport()');
 
 		return this._createTransport(
 			{
-				direction              : 'recv',
-				id                     : id,
-				iceParameters          : iceParameters,
-				iceCandidates          : iceCandidates,
-				dtlsParameters         : dtlsParameters,
-				sctpParameters         : sctpParameters,
-				iceServers             : iceServers,
-				iceTransportPolicy     : iceTransportPolicy,
-				additionalSettings     : additionalSettings,
-				proprietaryConstraints : proprietaryConstraints,
-				appData                : appData
+				direction: 'recv',
+				id: id,
+				iceParameters: iceParameters,
+				iceCandidates: iceCandidates,
+				dtlsParameters: dtlsParameters,
+				sctpParameters: sctpParameters,
+				iceServers: iceServers,
+				iceTransportPolicy: iceTransportPolicy,
+				additionalSettings: additionalSettings,
+				proprietaryConstraints: proprietaryConstraints,
+				appData: appData
 			});
 	}
 
@@ -540,8 +466,7 @@ export class Device
 			proprietaryConstraints,
 			appData
 		}: InternalTransportOptions
-	): Transport
-	{
+	): Transport {
 		if (!this._loaded)
 			throw new InvalidStateError('not loaded');
 		else if (typeof id !== 'string')
@@ -571,9 +496,9 @@ export class Device
 				additionalSettings,
 				proprietaryConstraints,
 				appData,
-				handlerFactory          : this._handlerFactory,
-				extendedRtpCapabilities : this._extendedRtpCapabilities,
-				canProduceByKind        : this._canProduceByKind
+				handlerFactory: this._handlerFactory,
+				extendedRtpCapabilities: this._extendedRtpCapabilities,
+				canProduceByKind: this._canProduceByKind
 			});
 
 		// Emit observer event.
