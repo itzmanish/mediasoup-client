@@ -628,7 +628,7 @@ export class Chrome74 extends HandlerInterface {
 
 		const options =
 		{
-			negotiated: true,
+			negotiated: false,
 			id: this._nextSendSctpStreamId,
 			ordered,
 			maxPacketLifeTime,
@@ -652,19 +652,18 @@ export class Chrome74 extends HandlerInterface {
 			const offerMediaObject = localSdpObject.media
 				.find((m: any) => m.type === 'application');
 
-			if (!this._transportReady) {
-				await this._setupTransport(
-					{
-						localDtlsRole: this._forcedLocalDtlsRole ?? DtlsRole.client,
-						localSdpObject
-					});
-			}
-
 			logger.debug(
 				'sendDataChannel() | calling pc.setLocalDescription() [offer:%o]',
 				offer);
 
 			await this._pc.setLocalDescription(offer);
+
+			const localDtlsRole = this._forcedLocalDtlsRole ?? DtlsRole.client
+			if (!this._transportReady) {
+				// Update the remote DTLS role in the SDP.
+				this._remoteSdp!.updateDtlsRole(
+					localDtlsRole === DtlsRole.client ? DtlsRole.server : DtlsRole.client);
+			}
 
 			this._remoteSdp!.sendSctpAssociation({ offerMediaObject });
 
@@ -676,7 +675,15 @@ export class Chrome74 extends HandlerInterface {
 
 			await this._pc.setRemoteDescription(answer);
 
+			if (!this._transportReady) {
+				await this._setupTransport(
+					{
+						localDtlsRole: this._forcedLocalDtlsRole ?? DtlsRole.client,
+						localSdpObject
+					});
+			}
 			this._hasDataChannelMediaSection = true;
+
 		}
 
 		const sctpStreamParameters: SctpStreamParameters =
