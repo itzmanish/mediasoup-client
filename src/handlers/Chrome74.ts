@@ -938,6 +938,12 @@ export class Chrome74 extends HandlerInterface {
 
 			const answer = await this._pc.createAnswer();
 
+			logger.debug(
+				'receiveDataChannel() | calling pc.setRemoteDescription() [answer:%o]',
+				answer);
+
+			await this._pc.setLocalDescription(answer);
+
 			if (!this._transportReady) {
 				const localSdpObject = sdpTransform.parse(answer.sdp);
 
@@ -948,11 +954,6 @@ export class Chrome74 extends HandlerInterface {
 					});
 			}
 
-			logger.debug(
-				'receiveDataChannel() | calling pc.setRemoteDescription() [answer:%o]',
-				answer);
-
-			await this._pc.setLocalDescription(answer);
 
 			this._hasDataChannelMediaSection = true;
 		}
